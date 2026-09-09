@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for UserProfile
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('createdAt' in data) || data.createdAt is string) &&
+             (!('updatedAt' in data) || data.updatedAt is string);
+    }
+
+    // Validation for TypingRecord
+    function isValidTypingRecord(data, userId) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             data.userName is string && data.userName.size() > 0 && data.userName.size() <= 100 &&
+             data.date is string && data.date.size() <= 100 &&
+             data.textTitle is string && data.textTitle.size() > 0 && data.textTitle.size() <= 200 &&
+             data.mode is string && (data.mode == 'word' || data.mode == 'sentence' || data.mode == 'paragraph') &&
+             data.wpm is number && data.wpm >= 0 && data.wpm <= 2000 &&
+             data.cpm is number && data.cpm >= 0 && data.cpm <= 10000 &&
+             data.accuracy is number && data.accuracy >= 0 && data.accuracy <= 100 &&
+             data.timeSpent is number && data.timeSpent >= 0 && data.timeSpent <= 86400 &&
+             data.completed is bool &&
+             (!('createdAt' in data) || data.createdAt is string);
+    }
+
+    // Validation for CustomPreset
+    function isValidCustomPreset(data, userId) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+             data.language is string && (data.language == 'ko' || data.language == 'en' || data.language == 'custom') &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 50000 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('createdAt' in data) || data.createdAt is string);
+    }
+
+    // User document rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming(), userId) &&
+                    incoming().userId == existing().userId;
+      allow delete: if false;
+
+      // Student's typing records subcollection
+      match /records/{recordId} {
+        allow get: if isOwner(userId) && isValidId(recordId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(recordId) && isValidTypingRecord(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(recordId) && isValidTypingRecord(incoming(), userId) &&
+                      incoming().id == existing().id && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(recordId);
+      }
+
+      // Student's custom presets subcollection
+      match /customPresets/{presetId} {
+        allow get: if isOwner(userId) && isValidId(presetId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(presetId) && isValidCustomPreset(incoming(), userId);
+        allow update: if isOwner(userId) && isValidId(presetId) && isValidCustomPreset(incoming(), userId) &&
+                      incoming().id == existing().id && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(presetId);
+      }
+    }
+  }
+}

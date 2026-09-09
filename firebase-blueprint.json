@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 200 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "displayName"]
+    },
+    "TypingRecord": {
+      "title": "TypingRecord",
+      "description": "Individual typing practice result for a student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string", "maxLength": 50 },
+        "textTitle": { "type": "string", "maxLength": 200 },
+        "mode": { "type": "string", "enum": ["word", "sentence", "paragraph"] },
+        "wpm": { "type": "number" },
+        "cpm": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "timeSpent": { "type": "number" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "userName", "date", "textTitle", "mode", "wpm", "cpm", "accuracy", "timeSpent", "completed"]
+    },
+    "CustomPreset": {
+      "title": "CustomPreset",
+      "description": "User-defined custom typing practice text",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "language": { "type": "string", "enum": ["ko", "en", "custom"] },
+        "content": { "type": "string", "maxLength": 50000 },
+        "description": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "language", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document storing basic identity and display details"
+    },
+    "/users/{userId}/records/{recordId}": {
+      "schema": "TypingRecord",
+      "description": "Typing workout log created by the user"
+    },
+    "/users/{userId}/customPresets/{presetId}": {
+      "schema": "CustomPreset",
+      "description": "Custom texts created or uploaded by the user"
+    }
+  }
+}
